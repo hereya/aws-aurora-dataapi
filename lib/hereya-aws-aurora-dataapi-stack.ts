@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 export class HereyaAwsAuroraDataapiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -69,6 +70,14 @@ export class HereyaAwsAuroraDataapiStack extends cdk.Stack {
       ],
     });
 
+    // Store masterSecretArn in SSM so Hereya doesn't auto-resolve it as a secret value.
+    // Downstream packages need the ARN itself (to pass to Data API), not the secret content.
+    const masterSecretArnParam = new ssm.StringParameter(this, 'MasterSecretArnParam', {
+      parameterName: `/${this.stackName}/master-secret-arn`,
+      stringValue: cluster.secret!.secretArn,
+      description: 'ARN of the Aurora master user secret',
+    });
+
     // Outputs
     new cdk.CfnOutput(this, 'clusterArn', {
       value: cluster.clusterArn,
@@ -81,8 +90,8 @@ export class HereyaAwsAuroraDataapiStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'masterSecretArn', {
-      value: cluster.secret!.secretArn,
-      description: 'The ARN of the master user secret',
+      value: masterSecretArnParam.parameterArn,
+      description: 'SSM parameter ARN containing the master user secret ARN',
     });
 
     new cdk.CfnOutput(this, 'awsRegion', {

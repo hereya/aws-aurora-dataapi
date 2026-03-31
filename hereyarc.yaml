@@ -1,5 +1,5 @@
 name: hereya/aws-aurora-dataapi
-version: 0.1.1
+version: 0.1.2
 description: "Provisions an Aurora Serverless v2 PostgreSQL cluster with Data API enabled for shared multi-tenant platform use."
 visibility: public
 iac: cdk
