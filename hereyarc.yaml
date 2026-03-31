@@ -1,0 +1,6 @@
+name: hereya/aws-aurora-dataapi
+version: 0.1.0
+description: "Provisions an Aurora Serverless v2 PostgreSQL cluster with Data API enabled for shared multi-tenant platform use."
+visibility: public
+iac: cdk
+infra: aws
