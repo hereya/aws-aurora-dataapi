@@ -9,8 +9,22 @@ export class HereyaAwsAuroraDataapiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const minACU = process.env.minACU ? parseFloat(process.env.minACU) : 0.5;
+    // Default to scale-to-zero with a 5-minute auto-pause.
+    // Set minACU > 0 to opt out (auto-pause is then ignored, since AWS only
+    // allows it when the min capacity is 0).
+    const minACU = process.env.minACU !== undefined ? parseFloat(process.env.minACU) : 0;
     const maxACU = process.env.maxACU ? parseFloat(process.env.maxACU) : 4;
+    const autoPauseMinutes = minACU === 0
+      ? (process.env.autoPauseMinutes ? parseInt(process.env.autoPauseMinutes, 10) : 5)
+      : undefined;
+
+    if (
+      autoPauseMinutes !== undefined &&
+      (Number.isNaN(autoPauseMinutes) || autoPauseMinutes < 5 || autoPauseMinutes > 1440)
+    ) {
+      throw new Error('autoPauseMinutes must be an integer between 5 and 1440');
+    }
+
     const engineVersion = process.env.engineVersion || '16.6';
     const autoDelete = process.env.autoDelete === 'true';
 
@@ -41,6 +55,9 @@ export class HereyaAwsAuroraDataapiStack extends cdk.Stack {
       writer: rds.ClusterInstance.serverlessV2('writer'),
       serverlessV2MinCapacity: minACU,
       serverlessV2MaxCapacity: maxACU,
+      ...(autoPauseMinutes !== undefined
+        ? { serverlessV2AutoPauseDuration: cdk.Duration.minutes(autoPauseMinutes) }
+        : {}),
       enableDataApi: true,
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },

@@ -40,10 +40,32 @@ Configuration is provided via environment variables:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `minACU` | No | `0.5` | Minimum Aurora Capacity Units for Serverless v2 scaling. Valid range: 0.5 to 128. Lower values reduce cost during idle periods. |
+| `minACU` | No | `0` | Minimum Aurora Capacity Units for Serverless v2 scaling. Valid range: 0 to 128. The default `0` enables **scale-to-zero / auto-pause** (see below). Set to `0.5` or higher to keep the cluster always-on. |
 | `maxACU` | No | `4` | Maximum Aurora Capacity Units for Serverless v2 scaling. Valid range: 1 to 128. Must be >= minACU. |
-| `engineVersion` | No | `16.6` | Aurora PostgreSQL engine version (e.g., `16.6`, `15.4`, `14.9`). The major version is extracted automatically for the engine family. |
+| `autoPauseMinutes` | No | `5` | Minutes of inactivity before the cluster auto-pauses. Only applied when `minACU=0` (the default); ignored otherwise. Valid range: 5 to 1440 (24 h). |
+| `engineVersion` | No | `16.6` | Aurora PostgreSQL engine version (e.g., `16.6`, `15.4`, `14.9`). The major version is extracted automatically for the engine family. Auto-pause requires PG 13.15+, 14.12+, 15.7+, or 16.3+. |
 | `autoDelete` | No | `false` | Set to `true` to enable cluster deletion on stack removal (sets removal policy to DESTROY). **Not recommended for production.** |
+
+## Scale to zero (auto-pause)
+
+By default, this package provisions the cluster with `minACU=0` and a 5-minute auto-pause window. Aurora Serverless v2 auto-pauses idle clusters down to **0 ACU**, eliminating compute charges while paused (storage charges still apply). This makes the package well-suited for infrequently used databases out of the box.
+
+```bash
+# Defaults: minACU=0, autoPauseMinutes=5
+hereya add hereya/aws-aurora-dataapi
+
+# Longer idle window (e.g. 30 minutes):
+hereya add hereya/aws-aurora-dataapi -p autoPauseMinutes=30
+
+# Opt out of scale-to-zero (always-on, 0.5 ACU floor):
+hereya add hereya/aws-aurora-dataapi -p minACU=0.5
+```
+
+Trade-offs:
+
+- The first query after a pause incurs a **~15 second cold start** while the cluster resumes. Subsequent queries respond instantly.
+- Auto-pause requires Aurora PostgreSQL **13.15+, 14.12+, 15.7+, or 16.3+**. The default `16.6` qualifies.
+- Suitable for: dev/staging databases, internal tools, batch workloads. **Not** suitable for user-facing latency-sensitive paths — set `minACU=0.5` (or higher) to keep the cluster always-on.
 
 ## Outputs
 

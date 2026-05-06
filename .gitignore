@@ -6,3 +6,6 @@ node_modules
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+# Cached lookups are account-specific; this package targets many accounts.
+cdk.context.json
